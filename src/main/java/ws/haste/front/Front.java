@@ -15,7 +15,7 @@ public class Front {
         System.out.println("Hello World!");
 
         final @NotNull Config config = new Config(
-                80,
+                8080,
                 new FileResource[] {
                     new FileResource("/", "text/html", new HashMap<>() {{
                         put(FileResource.Encoding.Identity, new File("index.html"));
