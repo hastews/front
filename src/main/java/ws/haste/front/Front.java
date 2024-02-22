@@ -12,8 +12,6 @@ import java.util.HashMap;
  */
 public class Front {
     public static void main(final @NotNull String @NotNull [] args) {
-        System.out.println("Hello World!");
-
         final @NotNull Config config = new Config(
                 8080,
                 new FileResource[] {
