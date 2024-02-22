@@ -163,6 +163,7 @@ public class FileResource extends Resource {
         else {
             // send file in 4KB chunks
             try (final @NotNull RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+                res.setChunked(true);
                 long remainingBytes = file.length();
                 while (remainingBytes > 0) {
                     int bytesToRead = (int) Math.min(chunkSize, remainingBytes);
