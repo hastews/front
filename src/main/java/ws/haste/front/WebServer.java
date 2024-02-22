@@ -1,6 +1,5 @@
 package ws.haste.front;
 
-import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -8,6 +7,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 public class WebServer {
     private final @NotNull Config config;
@@ -19,8 +19,12 @@ public class WebServer {
         server.requestHandler(this::requestListener);
         server.listen(config.port());
     }
-    public @NotNull Future<@NotNull Void> stop() {
-        return server.close();
+    public @NotNull CompletableFuture<@NotNull Void> stop() {
+        final @NotNull CompletableFuture<@NotNull Void> asyncTask = new CompletableFuture<>();
+        server.close().onComplete((v) -> {
+            asyncTask.complete(v.result());
+        });
+        return asyncTask;
     }
 
     private boolean wildcardMatch(final @NotNull String pattern, final @NotNull String text) {

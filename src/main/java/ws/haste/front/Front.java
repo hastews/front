@@ -2,7 +2,6 @@ package ws.haste.front;
 
 import io.vertx.core.Vertx;
 import org.jetbrains.annotations.NotNull;
-import sun.misc.Signal;
 
 import java.io.File;
 import java.util.HashMap;
@@ -26,11 +25,9 @@ public class Front {
         );
         final @NotNull WebServer ws = new WebServer(config);
 
-        Signal.handle(new Signal("INT"), signal -> {
-            ws.stop().andThen(future -> {
-                System.exit(0);
-            });
-        });
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            ws.stop().join();
+        }));
     }
 
     public final static Vertx vertx = Vertx.vertx();
