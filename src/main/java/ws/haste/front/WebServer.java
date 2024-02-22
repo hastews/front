@@ -1,5 +1,6 @@
 package ws.haste.front;
 
+import io.vertx.core.Future;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -18,8 +19,8 @@ public class WebServer {
         server.requestHandler(this::requestListener);
         server.listen(config.port());
     }
-    public void stop() {
-        server.close();
+    public @NotNull Future<@NotNull Void> stop() {
+        return server.close();
     }
 
     private boolean wildcardMatch(final @NotNull String pattern, final @NotNull String text) {

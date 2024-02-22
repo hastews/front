@@ -29,7 +29,9 @@ public class Front {
         final @NotNull WebServer ws = new WebServer(config);
 
         Signal.handle(new Signal("INT"), signal -> {
-            ws.stop();
+            ws.stop().andThen(future -> {
+                System.exit(0);
+            });
         });
     }
 
