@@ -1,6 +1,8 @@
 package ws.haste.front;
 
 import io.vertx.core.Vertx;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -15,7 +17,7 @@ public class Front {
                 8080,
                 new FileResource[] {
                     new FileResource("/", "text/html", new HashMap<>() {{
-                        put(FileResource.Encoding.Identity, new File("index.html"));
+                        put(FileResource.Encoding.Identity, new File(System.getenv("HASTE_FILE")));
                     }}, null, null)
                 },
                 new HashMap<>(),
@@ -26,9 +28,15 @@ public class Front {
         final @NotNull WebServer ws = new WebServer(config);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            getLogger().info("Stopping...");
             ws.stop().join();
         }));
     }
 
-    public final static Vertx vertx = Vertx.vertx();
+    public static @NotNull Logger getLogger() {
+        return logger;
+    }
+
+    public final static @NotNull Vertx vertx = Vertx.vertx();
+    private static final @NotNull Logger logger = LogManager.getLogger(Front.class);
 }

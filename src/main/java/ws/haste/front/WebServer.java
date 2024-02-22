@@ -13,11 +13,13 @@ public class WebServer {
     private final @NotNull Config config;
     private final @NotNull HttpServer server;
     public WebServer(final @NotNull Config config) {
+        Front.getLogger().info("Starting...");
         this.config = config;
         this.server = Front.vertx.createHttpServer();
 
         server.requestHandler(this::requestListener);
         server.listen(config.port());
+        Front.getLogger().info("Listening on port " + config.port());
     }
     public @NotNull CompletableFuture<@NotNull Void> stop() {
         final @NotNull CompletableFuture<@NotNull Void> asyncTask = new CompletableFuture<>();
@@ -82,6 +84,7 @@ public class WebServer {
         }
     }
     private void sendError(final @NotNull HttpServerRequest req, final @NotNull WebServerException error) {
+        Front.getLogger().error(error);
         sendError(req, error.status);
     }
 
