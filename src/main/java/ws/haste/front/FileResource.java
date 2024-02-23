@@ -156,13 +156,13 @@ public class FileResource extends Resource {
     private static final @NotNull String CRLF = "\r\n";
 
     private void serveFile(final @NotNull String filePath, final @NotNull Encoding encoding, final @NotNull HttpServerResponse res) throws WebServerException {
-        final @NotNull File file = new File(filePath);
         res.headers().set("Content-Type", this.contentType);
         if (encoding != Encoding.Identity) res.headers().set("Content-Encoding", encoding.toString());
         if (false) {
             // TODO: memcached
         }
         else {
+            final @NotNull File file = new File(filePath);
             if (filePath.startsWith("haste://")) {
                 final @NotNull Optional<@NotNull InputStream> inputStream = Front.getInternalFile(filePath);
                 if (inputStream.isEmpty()) throw new WebServerException(404);
