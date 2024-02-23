@@ -5,11 +5,6 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Objects;
@@ -29,12 +24,18 @@ public class WebServer {
         server.listen(config.port());
         Front.getLogger().info("Listening on port " + config.port());
     }
-    public @NotNull CompletableFuture<@NotNull Void> stop() {
-        final @NotNull CompletableFuture<@NotNull Void> asyncTask = new CompletableFuture<>();
+    public void stop() {
+        final @NotNull CompletableFuture<@NotNull Void> closeWs = new CompletableFuture<>();
         server.close().onComplete((v) -> {
-            asyncTask.complete(v.result());
+            closeWs.complete(v.result());
         });
-        return asyncTask;
+        closeWs.join();
+
+        final @NotNull CompletableFuture<@NotNull Void> closeVertx = new CompletableFuture<>();
+        Front.vertx.close().onComplete((v) -> {
+            closeVertx.complete(v.result());
+        });
+        closeVertx.join();
     }
 
     private boolean wildcardMatch(final @NotNull String pattern, final @NotNull String text) {
@@ -99,7 +100,7 @@ public class WebServer {
         }
     }
     private void sendError(final @NotNull HttpServerRequest req, final @NotNull WebServerException error) {
-        Front.getLogger().error(error);
+        if (error.cause != null) Front.getLogger().error("HTTP Error " + error.status, error.cause);
         sendError(req, error.status);
     }
 
@@ -138,31 +139,10 @@ public class WebServer {
         final int @NotNull [] statuses = {404, 500};
         for (final int status : statuses) {
             if (!config.errorResources().containsKey(status)) {
-                final @NotNull File tempFile;
-                try {
-                    tempFile = File.createTempFile(String.valueOf(status), ".html");
-                    tempFile.deleteOnExit();
-                } catch (final @NotNull IOException e) {
-                    Front.getLogger().error("Failed to create temporary file for default " + status + " error page", e);
-                    return;
-                }
-                try (final @NotNull InputStream inputStream = Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("error/" + status + ".html"));
-                     final @NotNull OutputStream outputStream = new FileOutputStream(tempFile)) {
-
-                    byte[] buffer = new byte[1024];
-                    int length;
-                    while ((length = inputStream.read(buffer)) > 0) {
-                        outputStream.write(buffer, 0, length);
-                    }
-                }
-                catch (final @NotNull IOException e) {
-                    Front.getLogger().error("Failed to write to temporary file for default " + status + " error page", e);
-                    return;
-                }
                 config.errorResources().put(status, new ErrorResource(
                         "text/html",
                         new HashMap<>() {{
-                            put(FileResource.Encoding.Identity, tempFile);
+                            put(FileResource.Encoding.Identity, "haste://error/" + status + ".html");
                         }},
                         null,
                         null

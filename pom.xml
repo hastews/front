@@ -36,6 +36,11 @@
             <artifactId>log4j-core</artifactId>
             <version>2.23.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.snakeyaml</groupId>
+            <artifactId>snakeyaml-engine</artifactId>
+            <version>2.7</version>
+        </dependency>
     </dependencies>
 
     <build>
