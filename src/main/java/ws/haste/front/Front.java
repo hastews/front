@@ -6,8 +6,9 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -15,18 +16,22 @@ import java.util.Optional;
  */
 public class Front {
     public static void main(final @NotNull String @NotNull [] args) {
-        final @NotNull Config config = new Config(
-                8080,
-                new FileResource[] {
-                    new FileResource("/", "text/html", new HashMap<>() {{
-                        put(FileResource.Encoding.Identity, new File(System.getenv("HASTE_FILE")));
-                    }}, null, null)
-                },
-                new HashMap<>(),
-                new HashMap<>() {{
-                    put("Server", "haste.ws");
-                }}
-        );
+        start();
+    }
+
+    public static void start() {
+        final @NotNull Config config;
+        try {
+            config = findConfig();
+        }
+        catch (final @NotNull Config.ConfigException e) {
+            logger.fatal("Configuration Error: " + e.getMessage());
+            System.exit(1);
+            return;
+        }
+        final @NotNull List<@NotNull Integer> portsRequireRoot = Arrays.asList(80, 443);
+        if (portsRequireRoot.contains(config.port()) && Optional.ofNullable(System.getProperty("user.name")).map(u -> !u.equals("root")).orElse(false))
+            getLogger().warn("Requested port is " + config.port() + ". This port may require administrative privileges.");
         final @NotNull WebServer ws = new WebServer(config);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
