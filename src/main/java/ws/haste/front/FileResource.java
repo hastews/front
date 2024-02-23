@@ -65,7 +65,7 @@ public class FileResource extends Resource {
         final @NotNull Optional<@NotNull String> rangesHeader = Optional.ofNullable(req.getHeader("Range"));
         final @NotNull Optional<@NotNull Ranges> r = rangesHeader.map(Ranges::fromString);
         final int currentStatus = res.getStatusCode();
-        if (file.startsWith("haste://") || currentStatus < 200 || currentStatus >= 300 || r.isEmpty() || r.get().ranges.length == 0 || r.get().unit.equalsIgnoreCase("bytes")) {
+        if (file.startsWith("haste://") || currentStatus < 200 || currentStatus >= 300 || r.isEmpty() || r.get().ranges.length == 0 || !r.get().unit.equalsIgnoreCase("bytes")) {
             serveFile(file, encoding, res);
             return;
         }
@@ -73,24 +73,28 @@ public class FileResource extends Resource {
             // TODO: memcached pages
         }
         else {
-            final long size = file.length();
-            final @NotNull Ranges.AbsoluteRange @NotNull [] ranges = (Ranges.AbsoluteRange[]) r.get().optimiseRanges(size).ranges;
+            final long size = new File(file).length();
+            final @NotNull Ranges.OptimisedRanges optimisedRanges = r.get().optimiseRanges(size);
+            final @NotNull Ranges.AbsoluteRange @NotNull [] ranges = optimisedRanges.ranges;
             if (ranges.length == 0) {
                 serveFile(file, encoding, res);
                 return;
             }
-            else res.setChunked(true);
+            if (!optimisedRanges.allSatisfiable()) throw new WebServerException(416, new HashMap<>() {{
+                put("Content-Range", "bytes */" + size);
+            }});
+            res.setChunked(true);
             if (ranges.length == 1) {
                 final @NotNull Ranges.AbsoluteRange range = ranges[0];
                 final @NotNull RandomAccessFile raf;
-                try (final @NotNull RandomAccessFile tmp = new RandomAccessFile(file, "r")) {
-                    raf = tmp;
+                try {
+                    raf = new RandomAccessFile(file, "r");
                 }
                 catch (final @NotNull IOException e) {
                     throw new WebServerException(404, e);
                 }
                 try {
-                    res.setStatusCode(204);
+                    res.setStatusCode(206);
                     res.headers().set("Content-Type", contentType);
                     res.headers().set("Content-Range", "bytes " + range.start + "-" + range.end + "/" + size);
 
@@ -118,8 +122,8 @@ public class FileResource extends Resource {
             }
             else {
                 final @NotNull RandomAccessFile raf;
-                try (final @NotNull RandomAccessFile tmp = new RandomAccessFile(file, "r")) {
-                    raf = tmp;
+                try {
+                    raf = new RandomAccessFile(file, "r");
                 }
                 catch (final @NotNull IOException e) {
                     throw new WebServerException(404, e);
