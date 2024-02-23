@@ -40,7 +40,7 @@ resources: [
     # Note: The following headers are managed by the server:
     #   Content-Type, ETag, Content-Length, Transfer-Encoding, Range, Date, Accept-Ranges
     headers:
-      {content-security-policy: "default-src 'self';"},
+      {content-security-policy: "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com;"},
 
     # Resource files (and encodings)
     # Specify here the different file encodings that are available for this resource. For no compression, the encoding
