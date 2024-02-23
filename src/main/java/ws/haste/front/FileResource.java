@@ -21,7 +21,7 @@ public class FileResource extends Resource {
     public final @NotNull HashMap<@NotNull Encoding, @NotNull File> files;
     public final @Nullable String etag;
 
-    public FileResource(final @NotNull String url, final @NotNull String contentType, final @NotNull HashMap<@NotNull Encoding, @NotNull File> files, final @Nullable String etag, final @Nullable HashMap<@NotNull String, @NotNull String> headers) {
+    public FileResource(final @NotNull String url, final @NotNull String contentType, final @NotNull HashMap<@NotNull Encoding, @NotNull File> files, final @Nullable String etag, final @Nullable HashMap<@NotNull String, @Nullable String> headers) {
         super(url, headers == null ? new HashMap<>() : headers);
         this.contentType = contentType;
         this.files = files;
