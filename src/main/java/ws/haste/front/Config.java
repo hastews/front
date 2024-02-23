@@ -109,7 +109,7 @@ public record Config(int port, @NotNull FileResource @NotNull [] resources,
             if (!(filesObj instanceof Map)) throw new ConfigException("resources.[n].files: must be an object");
             if (((Map<?, ?>) filesObj).keySet().stream().anyMatch(e -> !(e instanceof String) || !availableEncodings.contains(e)))
                 throw new ConfigException("resources.[n].files: encoding must be one of " + String.join(", ", availableEncodings));
-            final @NotNull HashMap<FileResource.@NotNull Encoding, @NotNull File> files = new HashMap<>();
+            final @NotNull HashMap<FileResource.@NotNull Encoding, @NotNull String> files = new HashMap<>();
             for (final @NotNull Map.Entry<?, ?> entry : ((Map<?, ?>) filesObj).entrySet()) {
                 final @NotNull String encodingString = (String) entry.getKey();
                 final @NotNull FileResource.Encoding encoding = FileResource.Encoding.fromString(encodingString).orElseThrow(() -> new ConfigException("resources.[n].files: encoding must be one of " + String.join(", ", availableEncodings)));
@@ -118,7 +118,7 @@ public record Config(int port, @NotNull FileResource @NotNull [] resources,
                 final @NotNull File resourceFile = new File(filePath);
                 if (!filePath.startsWith("haste://") && !resourceFile.exists())
                     throw new ConfigException("resources.[n].files." + encodingString + ": " + filePath + " does not exist");
-                files.put(encoding, resourceFile);
+                files.put(encoding, filePath);
             }
 
             resources.add(new FileResource(path, contentType, files, etag.orElse(null), resourceHeaders.map(HashMap::new).orElse(null)));
@@ -176,7 +176,7 @@ public record Config(int port, @NotNull FileResource @NotNull [] resources,
             if (!(filesObj instanceof Map)) throw new ConfigException("error-pages." + key + ".files: must be an object");
             if (((Map<?, ?>) filesObj).keySet().stream().anyMatch(e -> !(e instanceof String) || !availableEncodings.contains(e)))
                 throw new ConfigException("error-pages." + key + ".files: encoding must be one of " + String.join(", ", availableEncodings));
-            final @NotNull HashMap<FileResource.@NotNull Encoding, @NotNull File> files = new HashMap<>();
+            final @NotNull HashMap<FileResource.@NotNull Encoding, @NotNull String> files = new HashMap<>();
             for (final @NotNull Map.Entry<?, ?> fileEntry : ((Map<?, ?>) filesObj).entrySet()) {
                 final @NotNull String encodingString = (String) fileEntry.getKey();
                 final @NotNull FileResource.Encoding encoding = FileResource.Encoding.fromString(encodingString).orElseThrow(() -> new ConfigException("error-pages." + key + ".files: encoding must be one of " + String.join(", ", availableEncodings)));
@@ -185,7 +185,7 @@ public record Config(int port, @NotNull FileResource @NotNull [] resources,
                 final @NotNull File resourceFile = new File(filePath);
                 if (!filePath.startsWith("haste://") && !resourceFile.exists())
                     throw new ConfigException("error-pages." + key + ".files." + encodingString + ": " + filePath + " does not exist");
-                files.put(encoding, resourceFile);
+                files.put(encoding, filePath);
             }
 
             errorResources.put(key, new ErrorResource(contentType, files, etag.orElse(null), resourceHeaders.map(HashMap::new).orElse(null)));

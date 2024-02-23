@@ -9,6 +9,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,10 +19,10 @@ import java.util.stream.Collectors;
 
 public class FileResource extends Resource {
     public final @NotNull String contentType;
-    public final @NotNull HashMap<@NotNull Encoding, @NotNull File> files;
+    public final @NotNull HashMap<@NotNull Encoding, @NotNull String> files;
     public final @Nullable String etag;
 
-    public FileResource(final @NotNull String url, final @NotNull String contentType, final @NotNull HashMap<@NotNull Encoding, @NotNull File> files, final @Nullable String etag, final @Nullable HashMap<@NotNull String, @Nullable String> headers) {
+    public FileResource(final @NotNull String url, final @NotNull String contentType, final @NotNull HashMap<@NotNull Encoding, @NotNull String> files, final @Nullable String etag, final @Nullable HashMap<@NotNull String, @Nullable String> headers) {
         super(url, headers == null ? new HashMap<>() : headers);
         this.contentType = contentType;
         this.files = files;
@@ -48,7 +49,7 @@ public class FileResource extends Resource {
         final @NotNull HttpMethod method = req.method();
         if (method != HttpMethod.HEAD && method != HttpMethod.GET) throw new WebServerException(405);
         final @NotNull Encoding encoding = pickEncoding(req);
-        final @NotNull File file = this.files.get(encoding);
+        final @NotNull String file = this.files.get(encoding);
         final @NotNull HttpServerResponse res = req.response();
         super.writeHead(res);
         if (etag != null) {
@@ -64,7 +65,7 @@ public class FileResource extends Resource {
         final @NotNull Optional<@NotNull String> rangesHeader = Optional.ofNullable(req.getHeader("Range"));
         final @NotNull Optional<@NotNull Ranges> r = rangesHeader.map(Ranges::fromString);
         final int currentStatus = res.getStatusCode();
-        if (currentStatus < 200 || currentStatus >= 300 || r.isEmpty() || r.get().ranges.length == 0 || r.get().unit.equalsIgnoreCase("bytes")) {
+        if (file.startsWith("haste://") || currentStatus < 200 || currentStatus >= 300 || r.isEmpty() || r.get().ranges.length == 0 || r.get().unit.equalsIgnoreCase("bytes")) {
             serveFile(file, encoding, res);
             return;
         }
@@ -154,15 +155,39 @@ public class FileResource extends Resource {
     private static final int chunkSize = 4096;
     private static final @NotNull String CRLF = "\r\n";
 
-    private void serveFile(final @NotNull File file, final @NotNull Encoding encoding, final @NotNull HttpServerResponse res) throws WebServerException {
+    private void serveFile(final @NotNull String filePath, final @NotNull Encoding encoding, final @NotNull HttpServerResponse res) throws WebServerException {
+        final @NotNull File file = new File(filePath);
         res.headers().set("Content-Type", this.contentType);
         if (encoding != Encoding.Identity) res.headers().set("Content-Encoding", encoding.toString());
         if (false) {
             // TODO: memcached
         }
         else {
+            if (filePath.startsWith("haste://")) {
+                final @NotNull Optional<@NotNull InputStream> inputStream = Front.getInternalFile(filePath);
+                if (inputStream.isEmpty()) throw new WebServerException(404);
+                res.setChunked(true);
+                // send in 4KB chunks
+                try {
+                    long remainingBytes = inputStream.get().available();
+                    while (remainingBytes > 0) {
+                        int bytesToRead = (int) Math.min(chunkSize, remainingBytes);
+                        final byte @NotNull [] buffer = new byte[bytesToRead];
+                        final int read = inputStream.get().read(buffer);
+                        if (read == -1) break;
+                        res.write(Buffer.buffer(buffer));
+                        remainingBytes -= read;
+                    }
+                }
+                catch (final @NotNull IOException e) {
+                    throw new WebServerException(500, e);
+                }
+                finally {
+                    res.end();
+                }
+            }
             // send file in 4KB chunks
-            try (final @NotNull RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            else try (final @NotNull RandomAccessFile raf = new RandomAccessFile(file, "r")) {
                 res.setChunked(true);
                 long remainingBytes = file.length();
                 while (remainingBytes > 0) {
