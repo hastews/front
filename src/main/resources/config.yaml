@@ -1,0 +1,69 @@
+# Haste.ws Front Server Configuration
+# The format is YAML 1.2. JSON is supported too.
+# Lines starting with # are ignored.
+# If your configuration is broken or otherwise invalid, the default configuration will be used.
+
+# HTTP Port
+# Server will listen on this port for HTTP connections
+port: 80
+
+# Default headers sent by the server on every response
+# The following headers are set by default:
+#   Date, Accept-Ranges
+headers:
+  # :)
+  server: haste.ws
+
+# Resources/files served by the server
+# When no resource path matches a request, the server will return a 404 error
+resources: [
+  {
+    # The URL path on which the resource will be accessible
+    # You can use `*` to match any number of characters (0–∞)
+    # If multiple resources match the same request path, the resource higher up in the configuration is used
+    # DO NOT add trailing slashes at the end!
+    path: "/",
+
+    # Resource content type
+    # See: https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Type#syntax
+    content-type: "text/html",
+
+    # Resource ETag
+    # If set, the server will correctly use 304 Not Modified
+    # Optional: Remove or set to `null` disable setting an ETag
+    # See: https://developer.mozilla.org/docs/Web/HTTP/Headers/ETag
+    # Note: You must update the ETag if the resource is changed
+    etag: '"22c55e"',
+
+    # Headers to add when serving this resource
+    # You can override the default headers here. To unset one, use `null`
+    # Note: The following headers are managed by the server:
+    #   Content-Type, ETag, Content-Length, Transfer-Encoding, Range, Date, Accept-Ranges
+    headers:
+      {content-security-policy: "default-src 'self';"},
+
+    # Resource files (and encodings)
+    # Specify here the different file encodings that are available for this resource. For no compression, the encoding
+    # name is "identity". The encoding names are exactly as in the "Content-Encoding" header (br, gzip, deflate, etc.)
+    # See: https://developer.mozilla.org/docs/Web/HTTP/Headers/Content-Encoding
+    # Note: The prefix haste:// is ONLY used to locate internal server resources. Instead, use an absolute path.
+    files:
+      {identity: "haste://index.html"},
+      # {br: "/path/to/index.html.br"},
+  },
+  {
+    path: "/config.yaml",
+    content-type: "text/yaml",
+    files: {identity: "haste://config.yaml"}
+  }
+]
+
+# Error pages
+#error-pages:
+#  404:
+#    content-type: "text/html"
+#    etag: '"123abc"'
+#    headers:
+#      some-header: value
+#    files:
+#      identity: "/path/to/error-404.html"
