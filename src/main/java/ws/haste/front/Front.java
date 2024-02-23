@@ -29,7 +29,7 @@ public class Front {
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             getLogger().info("Stopping...");
-            ws.stop().join();
+            ws.stop();
         }));
     }
 

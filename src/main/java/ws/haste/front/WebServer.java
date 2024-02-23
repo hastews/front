@@ -29,12 +29,18 @@ public class WebServer {
         server.listen(config.port());
         Front.getLogger().info("Listening on port " + config.port());
     }
-    public @NotNull CompletableFuture<@NotNull Void> stop() {
-        final @NotNull CompletableFuture<@NotNull Void> asyncTask = new CompletableFuture<>();
+    public void stop() {
+        final @NotNull CompletableFuture<@NotNull Void> closeWs = new CompletableFuture<>();
         server.close().onComplete((v) -> {
-            asyncTask.complete(v.result());
+            closeWs.complete(v.result());
         });
-        return asyncTask;
+        closeWs.join();
+
+        final @NotNull CompletableFuture<@NotNull Void> closeVertx = new CompletableFuture<>();
+        Front.vertx.close().onComplete((v) -> {
+            closeVertx.complete(v.result());
+        });
+        closeVertx.join();
     }
 
     private boolean wildcardMatch(final @NotNull String pattern, final @NotNull String text) {
