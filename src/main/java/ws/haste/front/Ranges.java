@@ -19,9 +19,9 @@ public class Ranges {
         this.ranges = ranges;
     }
 
-    public @NotNull Ranges optimiseRanges(final long size) {
+    public @NotNull OptimisedRanges optimiseRanges(final long size) {
         final @NotNull List<@NotNull AbsoluteRange> ranges = Arrays.stream(this.ranges).map(r -> r.toAbsoluteRange(size)).collect(Collectors.toList());
-        if (ranges.size() <= 1) return new Ranges(this.unit, this.ranges);
+        if (ranges.size() <= 1) return new OptimisedRanges(this.unit, ranges.toArray(new AbsoluteRange[0]), size);
 
         // Sort the ranges based on the start value
         ranges.sort(Comparator.comparingLong(a -> a.start));
@@ -48,7 +48,26 @@ public class Ranges {
         // Add the last range
         optimizedRanges.add(currentRange);
 
-        return new Ranges(this.unit, optimizedRanges.toArray(new Range[0]));
+        return new OptimisedRanges(this.unit, optimizedRanges.toArray(new AbsoluteRange[0]), size);
+    }
+
+    public static class OptimisedRanges extends Ranges {
+        public @NotNull AbsoluteRange @NotNull [] ranges;
+        public final long size;
+        public OptimisedRanges(final @NotNull String unit, final @NotNull AbsoluteRange @NotNull [] ranges, final long size) {
+            super(unit, ranges);
+            this.ranges = ranges;
+            this.size = size;
+        }
+
+        /**
+         * Check if all ranges can be satisfied
+         */
+        public boolean allSatisfiable() {
+            for (final @NotNull AbsoluteRange range : this.ranges)
+                if (!range.satisfiable()) return false;
+            return true;
+        }
     }
 
     public static @NotNull Ranges fromString(final @NotNull String rangesHeader) {
@@ -82,6 +101,7 @@ public class Ranges {
     public static final class AbsoluteRange extends Range {
         long start;
         long end;
+        final long size;
 
         public AbsoluteRange(final @Nullable Long start, final @Nullable Long end, final long size) {
             super(start, end);
@@ -89,6 +109,14 @@ public class Ranges {
             final long e = super.end == null ? size - 1 : super.end;
             this.start = Math.min(s, e);
             this.end = Math.max(s, e);
+            this.size = size;
+        }
+
+        /**
+         * Check if this range is satisfiable
+         */
+        public boolean satisfiable() {
+            return this.start >= 0 && this.start < this.size && this.end >= 0 && this.end < this.size;
         }
     }
 }

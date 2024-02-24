@@ -4,6 +4,7 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -71,13 +72,14 @@ public class WebServer {
         return Arrays.stream(config.resources()).filter(r -> wildcardMatch(r.url, removeTrailingSlashes(req.path()))).findFirst();
     }
 
-    private void sendError(final @NotNull HttpServerRequest req, final int status) {
+    private void sendError(final @NotNull HttpServerRequest req, final int status, final @Nullable HashMap<@NotNull String, @NotNull String> headers) {
         final @NotNull HttpServerResponse res = req.response();
         final @NotNull Optional<@NotNull ErrorResource> errorResource = Optional.ofNullable(config.errorResources().get(status));
         if (errorResource.isEmpty()) sendFailSafeServerError(req);
         else {
             res.setStatusCode(status);
             res.headers().set("Content-Type", errorResource.get().contentType);
+            if (headers != null) res.headers().addAll(headers);
             try {
                 errorResource.get().serve(req);
             }
@@ -85,6 +87,15 @@ public class WebServer {
                 sendFailSafeServerError(req);
             }
         }
+    }
+
+    private void sendError(final @NotNull HttpServerRequest req, final int status) {
+        sendError(req, status, null);
+    }
+
+    private void sendError(final @NotNull HttpServerRequest req, final @NotNull WebServerException error) {
+        if (error.cause != null) Front.getLogger().error("HTTP Error " + error.status, error.cause);
+        sendError(req, error.status, error.headers);
     }
     
     private void sendFailSafeServerError(final @NotNull HttpServerRequest req) {
@@ -99,14 +110,10 @@ public class WebServer {
             res.end("500");
         }
     }
-    private void sendError(final @NotNull HttpServerRequest req, final @NotNull WebServerException error) {
-        if (error.cause != null) Front.getLogger().error("HTTP Error " + error.status, error.cause);
-        sendError(req, error.status);
-    }
 
     private void requestListener(final @NotNull HttpServerRequest req) {
         final @NotNull HttpServerResponse res = req.response();
-        res.headers().setAll(config.headers());
+        res.headers().addAll(config.headers());
         try {
             final @NotNull Optional<@NotNull FileResource> resource = findResource(req);
             if (resource.isEmpty()) sendError(req, 404);
@@ -136,7 +143,7 @@ public class WebServer {
     }
 
     private void registerDefaultErrorPages() {
-        final int @NotNull [] statuses = {404, 500};
+        final int @NotNull [] statuses = {404, 416, 500};
         for (final int status : statuses) {
             if (!config.errorResources().containsKey(status)) {
                 config.errorResources().put(status, new ErrorResource(
